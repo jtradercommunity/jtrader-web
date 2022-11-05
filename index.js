@@ -125,6 +125,61 @@ app.get("/api/v1/stock/available/list", async (req,res) => {
 	console.log("---------------------------");
 });
 
+// New
+const { Validator,ValidationError } = require("express-json-validator-middleware");
+const { validate } = new Validator();
+const schema = require('./schema');
+const middleware = require('./middleware/middleware');
+const jwtToken = require('./jwt-token');
+const jwt = require('jsonwebtoken');
+app.use(express.json());
+app.use(middleware.validationErrorMiddleware);
+require('dotenv').config();
+
+
+
+app.post("/api/v1/user/login",validate({ body: schema.loginSchema }),function(req, res, next) {
+    let data = req.body;
+    let token = jwtToken.create(req.body.username)
+    let outputData = {
+        "status": {
+            "code": 1000,
+            "description" :"Successfully Login!",
+        },
+        "data": {
+            "token" : token,
+            "username" : req.body.username,
+            "redirectPath" : "/index.html"
+        }
+    }
+    res.json(outputData);
+    next();
+});
+
+app.post("/api/v1/user/register",validate({ body: schema.registerSchema }),function(req, res, next) {
+    let data = req.body;
+    let outputData = {
+        "status": {
+            "code": 1000,
+            "description" :"Successfully Sign Up!",
+        },
+        "data":{
+            "redirectPath" : "/signin.html"
+        }
+    }
+    res.json(outputData);
+    next();
+});
+
+app.post("/api/v1/user/auth", middleware.auth, (req, res) => {
+    let outputData = {
+        "status": {
+            "code": 1000,
+            "description" :"Successfully Authentication!",
+        }
+    }
+    res.status(200).json(outputData)
+})
 
 // Test
 
