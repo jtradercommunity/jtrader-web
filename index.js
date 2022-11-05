@@ -154,6 +154,15 @@ app.post("/api/v1/user/login",validate({ body: schema.loginSchema }),function(re
     }
     res.json(outputData);
     next();
+	// Log Request
+	console.log(`API Path: ${req.path}`);
+	console.log(`Request Host: ${req.hostname}`);
+	console.log(`Request Origin: ${req.ip}`);
+	console.log(`Request Url: ${req.originalUrl}`);
+	console.log(`Request Date: ${new Date().toJSON().slice(0, 10)}`);
+	console.log(`Request Time: ${new Date().toJSON().slice(11, 24)}`);
+	console.log(`Response Status: ${res.statusCode}`);
+	console.log("---------------------------");
 });
 
 app.post("/api/v1/user/register",validate({ body: schema.registerSchema }),function(req, res, next) {
@@ -169,6 +178,15 @@ app.post("/api/v1/user/register",validate({ body: schema.registerSchema }),funct
     }
     res.json(outputData);
     next();
+	// Log Request
+	console.log(`API Path: ${req.path}`);
+	console.log(`Request Host: ${req.hostname}`);
+	console.log(`Request Origin: ${req.ip}`);
+	console.log(`Request Url: ${req.originalUrl}`);
+	console.log(`Request Date: ${new Date().toJSON().slice(0, 10)}`);
+	console.log(`Request Time: ${new Date().toJSON().slice(11, 24)}`);
+	console.log(`Response Status: ${res.statusCode}`);
+	console.log("---------------------------");
 });
 
 app.post("/api/v1/user/auth", middleware.auth, (req, res) => {
@@ -179,6 +197,15 @@ app.post("/api/v1/user/auth", middleware.auth, (req, res) => {
         }
     }
     res.status(200).json(outputData)
+	// Log Request
+	console.log(`API Path: ${req.path}`);
+	console.log(`Request Host: ${req.hostname}`);
+	console.log(`Request Origin: ${req.ip}`);
+	console.log(`Request Url: ${req.originalUrl}`);
+	console.log(`Request Date: ${new Date().toJSON().slice(0, 10)}`);
+	console.log(`Request Time: ${new Date().toJSON().slice(11, 24)}`);
+	console.log(`Response Status: ${res.statusCode}`);
+	console.log("---------------------------");
 })
 
 // Test
