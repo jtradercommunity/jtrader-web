@@ -144,12 +144,12 @@ app.post("/api/v1/user/login",validate({ body: schema.loginSchema }),function(re
     let outputData = {
         "status": {
             "code": 1000,
-            "description" :"Successfully Login!",
+            "description" :"Successfully Sign In!",
         },
         "data": {
             "token" : token,
             "username" : req.body.username,
-            "redirectPath" : "/index.html"
+            "redirectPath" : "/home.html"
         }
     }
     res.json(outputData);
