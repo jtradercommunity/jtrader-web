@@ -24,6 +24,7 @@ app.get("/internal/api/v1/stock/list", (req,res) => {
 		res.status(500).json({ message: "Cannot Get Data at this time"});	
 	};
 	// Log Request
+	console.log(`API Method: ${req.method}`);
 	console.log(`API Path: ${req.path}`);
 	console.log(`Request Host: ${req.hostname}`);
 	console.log(`Request Origin: ${req.ip}`);
@@ -48,6 +49,7 @@ app.get("/internal/api/v1/stock/financial", (req,res) => {
 		res.status(500).json({ message: "Cannot Get Data at this time"});	
 	};
 	// Log Request
+	console.log(`API Method: ${req.method}`);
 	console.log(`API Path: ${req.path}`);
 	console.log(`Request Host: ${req.hostname}`);
 	console.log(`Request Origin: ${req.ip}`);
@@ -87,6 +89,7 @@ app.get("/api/v1/stock/inquiry", async (req,res) => {
 		res.status(500).json({ message: "Cannot Get access at this time"});	
 	};
 	// Log Request
+	console.log(`API Method: ${req.method}`);
 	console.log(`API Path: ${req.path}`);
 	console.log(`Request Host: ${req.hostname}`);
 	console.log(`Request Origin: ${req.ip}`);
@@ -115,6 +118,7 @@ app.get("/api/v1/stock/available/list", async (req,res) => {
 		res.status(500).json({ message: "Cannot Get Data at this moment"});
 	};
 	// Log Request
+	console.log(`API Method: ${req.method}`);
 	console.log(`API Path: ${req.path}`);
 	console.log(`Request Host: ${req.hostname}`);
 	console.log(`Request Origin: ${req.ip}`);
@@ -155,6 +159,7 @@ app.post("/api/v1/user/login",validate({ body: schema.loginSchema }),function(re
     res.json(outputData);
     next();
 	// Log Request
+	console.log(`API Method: ${req.method}`);
 	console.log(`API Path: ${req.path}`);
 	console.log(`Request Host: ${req.hostname}`);
 	console.log(`Request Origin: ${req.ip}`);
@@ -179,6 +184,7 @@ app.post("/api/v1/user/register",validate({ body: schema.registerSchema }),funct
     res.json(outputData);
     next();
 	// Log Request
+	console.log(`API Method: ${req.method}`);
 	console.log(`API Path: ${req.path}`);
 	console.log(`Request Host: ${req.hostname}`);
 	console.log(`Request Origin: ${req.ip}`);
@@ -198,6 +204,7 @@ app.post("/api/v1/user/auth", middleware.auth, (req, res) => {
     }
     res.status(200).json(outputData)
 	// Log Request
+	console.log(`API Method: ${req.method}`);
 	console.log(`API Path: ${req.path}`);
 	console.log(`Request Host: ${req.hostname}`);
 	console.log(`Request Origin: ${req.ip}`);
@@ -207,6 +214,63 @@ app.post("/api/v1/user/auth", middleware.auth, (req, res) => {
 	console.log(`Response Status: ${res.statusCode}`);
 	console.log("---------------------------");
 })
+
+// yahoo finance
+var yahooFinance = require('yahoo-finance');
+
+
+app.get("/api/v1/stock/price/inquiry", (req,res,next) => {
+	let symbol = req.query.symbol;
+	let from = req.query.from;
+	let to = req.query.to;
+	let period = req.query.period;
+	try {
+		yahooFinance.historical({
+			symbol: `${symbol}`,
+			from: `${from}`,
+			to: `${to}`,
+			period: `${period}`
+		}, function (err, quotes) {
+			if (quotes.length === 0){
+				res.status(400).json({
+					"status": {
+						"code" : 1899,
+						"description": "Cannot get data for this symbol!"
+					}
+				});
+			}else{
+				output = {
+					"status": {
+						"code": 1000,
+						"description" :"Successfully inquiry stock price!",
+					},
+					"data":{
+						"historyPrice" : quotes
+					}
+				}
+				res.json(output)
+			}
+		});
+	} catch(error) {
+		res.status(400).json({
+			"status": {
+				"code" : 1899,
+				"description": "Cannot process at this moment, please try again!"
+			}
+		});
+		next();
+	}
+	// Log Request
+	console.log(`API Method: ${req.method}`);
+	console.log(`API Path: ${req.path}`);
+	console.log(`Request Host: ${req.hostname}`);
+	console.log(`Request Origin: ${req.ip}`);
+	console.log(`Request Url: ${req.originalUrl}`);
+	console.log(`Request Date: ${new Date().toJSON().slice(0, 10)}`);
+	console.log(`Request Time: ${new Date().toJSON().slice(11, 24)}`);
+	console.log(`Response Status: ${res.statusCode}`);
+	console.log("---------------------------");
+});
 
 // Test
 
