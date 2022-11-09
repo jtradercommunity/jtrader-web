@@ -109,7 +109,7 @@ app.get("/api/v1/stock/available/list", async (req,res) => {
 		const stockList = await axios.get(reqUrl1);
 		var availableList = [];
 		
-		for (var i = 0, _pj_a = stockList.data.length; i < _pj_a; i += 1) {
+		for (var i = 0, length = stockList.data.length; i < length; i += 1) {
 			let data = {"id":i+1,'quote':stockList.data[i].name};
 			availableList[i] = data;
 		};
@@ -239,6 +239,9 @@ app.get("/api/v1/stock/price/inquiry", (req,res,next) => {
 					}
 				});
 			}else{
+				quotes.sort((a, b) => {
+					return new Date(a.date) - new Date(b.date);
+				})
 				output = {
 					"status": {
 						"code": 1000,
