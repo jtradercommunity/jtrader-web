@@ -275,6 +275,90 @@ app.get("/api/v1/stock/price/inquiry", (req,res,next) => {
 	console.log("---------------------------");
 });
 
+// SET100
+app.get("/api/v1/stock/set100/list", async (req,res) => {
+	// Function
+	try{
+		let reqUrl1 = 'https://www.set.or.th/api/set/index/set100/composition?lang=th';
+		const stockList = await axios.get(reqUrl1);
+		let set100 = stockList.data.composition.stockInfos
+		var set100List = [];
+		for (var i = 0, length = set100.length; i < length; i += 1) {
+			let data = {"id":i+1,'quote':set100[i].symbol};
+			set100List[i] = data;
+		};
+		output = {
+			"status": {
+				"code": 1000,
+				"description" :"Successfully inquiry SET100!",
+			},
+			"data":{
+				"set100List" : set100List
+			}
+		}		
+		res.json(output);
+	} catch(error) {
+		res.status(400).json({
+			"status": {
+				"code" : 1899,
+				"description": "Cannot process at this moment, please try again!"
+			}
+		});
+	};
+	// Log Request
+	console.log(`API Method: ${req.method}`);
+	console.log(`API Path: ${req.path}`);
+	console.log(`Request Host: ${req.hostname}`);
+	console.log(`Request Origin: ${req.ip}`);
+	console.log(`Request Url: ${req.originalUrl}`);
+	console.log(`Request Date: ${new Date().toJSON().slice(0, 10)}`);
+	console.log(`Request Time: ${new Date().toJSON().slice(11, 24)}`);
+	console.log(`Response Status: ${res.statusCode}`);
+	console.log("---------------------------");
+});
+
+// SET50
+app.get("/api/v1/stock/set50/list", async (req,res) => {
+	// Function
+	try{
+		let reqUrl1 = 'https://www.set.or.th/api/set/index/set50/composition?lang=th';
+		const stockList = await axios.get(reqUrl1);
+		let set50 = stockList.data.composition.stockInfos
+		var set50List = [];
+		for (var i = 0, length = set50.length; i < length; i += 1) {
+			let data = {"id":i+1,'quote':set50[i].symbol};
+			set50List[i] = data;
+		};
+		output = {
+			"status": {
+				"code": 1000,
+				"description" :"Successfully inquiry SET50!",
+			},
+			"data":{
+				"set100List" : set50List
+			}
+		}		
+		res.json(output);
+	} catch(error) {
+		res.status(400).json({
+			"status": {
+				"code" : 1899,
+				"description": "Cannot process at this moment, please try again!"
+			}
+		});
+	};
+	// Log Request
+	console.log(`API Method: ${req.method}`);
+	console.log(`API Path: ${req.path}`);
+	console.log(`Request Host: ${req.hostname}`);
+	console.log(`Request Origin: ${req.ip}`);
+	console.log(`Request Url: ${req.originalUrl}`);
+	console.log(`Request Date: ${new Date().toJSON().slice(0, 10)}`);
+	console.log(`Request Time: ${new Date().toJSON().slice(11, 24)}`);
+	console.log(`Response Status: ${res.statusCode}`);
+	console.log("---------------------------");
+});
+
 // Test
 
 app.get("/test", (req,res) => {
