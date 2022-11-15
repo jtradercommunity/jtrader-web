@@ -361,11 +361,27 @@ app.get("/api/v1/stock/set50/list", async (req,res) => {
 
 // Test
 
-app.get("/test", (req,res) => {
-	console.log("Call Test");
-	res.send("Test");
-});
+app.get("/test", async (req,res) => {
+	let set100 = await axios.get('http://localhost:3000/api/v1/stock/set100/list')
+	let set100List = set100.data.data.set100List
+	for(var key in set100List){
+		set100List[key].quote = set100List[key].quote+".BK";
+	};
+	let data = [];
+	let promises = [];
+	for (i = 0; i < set100List.length; i++) {
+		let quote = set100List[i].quote
+		let url = `http://localhost:3000/api/v1/stock/price/inquiry?symbol=${quote}&from=2021-11-09&to=2022-11-10&period=d`
+	  promises.push(
+		axios.get(url).then(response => {
+		  data.push(response.data.data);
+		})
+	  )
+	}
+	
+	Promise.all(promises).then(() => res.json(data));
 
+});
 
 app.listen(port, () => {
 	console.log("Server running on port 3000");
