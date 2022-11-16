@@ -242,6 +242,10 @@ app.get("/api/v1/stock/price/inquiry", (req,res,next) => {
 				quotes.sort((a, b) => {
 					return new Date(a.date) - new Date(b.date);
 				})
+				for (var i = 0, length = quotes.length; i < length; i += 1) {
+					newDate = quotes[i].date.toJSON().slice(0, 10)
+					quotes[i].date = newDate
+				}
 				output = {
 					"status": {
 						"code": 1000,
@@ -361,26 +365,122 @@ app.get("/api/v1/stock/set50/list", async (req,res) => {
 
 // Test
 
-app.get("/test", async (req,res) => {
-	let set100 = await axios.get('http://localhost:3000/api/v1/stock/set100/list')
-	let set100List = set100.data.data.set100List
-	for(var key in set100List){
-		set100List[key].quote = set100List[key].quote+".BK";
-	};
-	let data = [];
-	let promises = [];
-	for (i = 0; i < set100List.length; i++) {
-		let quote = set100List[i].quote
-		let url = `http://localhost:3000/api/v1/stock/price/inquiry?symbol=${quote}&from=2021-11-09&to=2022-11-10&period=d`
-	  promises.push(
-		axios.get(url).then(response => {
-		  data.push(response.data.data);
-		})
-	  )
-	}
-	
-	Promise.all(promises).then(() => res.json(data));
+const EMA = require('technicalindicators').EMA;
+app.get("/internal/api/v1/stock/calculate/ema", async (req,res,next) => {
+	let quote = req.query.quote;
+	let from = req.query.from;
+	let to = req.query.to;
+	let ema = req.query.ema;
+	try{
+		let calFrom = from.replace(from.substring(0,4),from.substring(0,4)-1)
+		
+		let histPriceResp = await axios.get(`http://localhost:3000/api/v1/stock/price/inquiry?symbol=${quote}&from=${calFrom}&to=${to}&period=d`)
+		let histPriceRaw = await histPriceResp.data.data.historyPrice
+		let closePrice = [];
+		for (var i = 0, length = histPriceRaw.length; i < length; i += 1) {
+			closePrice[i] = histPriceRaw[i].close
+		};
+		let emaList = EMA.calculate({period : ema, values : closePrice});
+		
+		let diff = histPriceRaw.length - emaList.length
 
+		for (var i = 0, length = diff; i < length; i += 1) {
+			emaList.unshift("")
+		};
+
+		for (var i = 0, length = histPriceRaw.length; i < length; i += 1) {
+			histPriceRaw[i]["EMA"] = emaList[i]
+			if(emaList[i] != "" && histPriceRaw[i].close >= emaList[i]){
+				histPriceRaw[i]["isEmaAbove"] = "Y"
+			}else{
+				histPriceRaw[i]["isEmaAbove"] = "N"
+			}
+		};
+		res.json(histPriceRaw)
+		next();
+	} catch(error) {
+		res.status(400).json({
+			"status": {
+				"code" : 1899,
+				"description": "Cannot process at this moment, please try again!"
+			}
+		});
+		next();
+	};
+	// Log Request
+	console.log(`API Method: ${req.method}`);
+	console.log(`API Path: ${req.path}`);
+	console.log(`Request Host: ${req.hostname}`);
+	console.log(`Request Origin: ${req.ip}`);
+	console.log(`Request Url: ${req.originalUrl}`);
+	console.log(`Request Date: ${new Date().toJSON().slice(0, 10)}`);
+	console.log(`Request Time: ${new Date().toJSON().slice(11, 24)}`);
+	console.log(`Response Status: ${res.statusCode}`);
+	console.log("---------------------------");
+});
+
+app.get("/api/v1/stock/total/ema", async (req,res,next) => {
+	try{
+		let set100 = await axios.get('http://localhost:3000/api/v1/stock/set100/list')
+		let set100List = set100.data.data.set100List
+		//let set100List = [{quote:"KKP"},{quote:"OR"}]
+		let from = req.query.from;
+		let to = req.query.to;
+		let ema = req.query.ema;
+		for(var key in set100List){
+			set100List[key].quote = set100List[key].quote+".BK";
+		};
+
+		let getRealDate = await axios.get(`http://localhost:3000/api/v1/stock/price/inquiry?symbol=^SET.BK&from=${from}&to=${to}&period=d`)
+		let getRealDateResp = await getRealDate.data.data.historyPrice
+		let realStartDate = await getRealDateResp[0].date;
+		let realEndDate = await getRealDateResp[getRealDateResp.length - 1].date;
+
+		let rawData = []
+
+		for (var i = 0, length = set100List.length; i < length; i += 1) {
+			let quote = set100List[i].quote;
+			let reqUrl1 = `http://localhost:3000/internal/api/v1/stock/calculate/ema?quote=${quote}&from=${from}&to=${to}&ema=${ema}`;
+			const stockList = await axios.get(reqUrl1);
+			let stockData = stockList.data;
+			for (var x = 0, lengths = stockData.length; x < lengths; x += 1){
+				data = stockData[x];
+				rawData.push(data)
+			}
+		}
+
+		let outputData = {};
+		var dateList = rawData.map( (value) => value.date).filter( (value, index, _arr) => _arr.indexOf(value) == index);
+
+		for (var i = 0, length = dateList.length; i < length; i += 1) {
+			key = dateList[i]
+			outputData[key] = 0;
+		}
+
+		for (var i = 0, length = rawData.length; i < length; i += 1) {
+			if (rawData[i].isEmaAbove === "Y"){
+				date = rawData[i].date
+				outputData[date] = outputData[date]+1
+			}
+		}
+
+		output = {
+			"status": {
+				"code": 1000,
+				"description" :"Successfully Retrieve Above EMA amount!",
+			},
+			"data":outputData
+		}
+		res.json(output)
+	} catch(error) {
+		res.status(400).json({
+			"status": {
+				"code" : 1899,
+				"description": "Cannot process at this moment, please try again!"
+			}
+		});
+		next();
+	};
 });
 
 app.listen(port, () => {
