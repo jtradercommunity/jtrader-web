@@ -3,6 +3,8 @@ let cors = require('cors');
 const axios = require('axios');
 let app = express();
 const port = 3000;
+const db = require('./function/dbConnection');
+let dbConn = db.dbConnection()
 
 // CORS
 
@@ -170,19 +172,60 @@ app.post("/api/v1/user/login",validate({ body: schema.loginSchema }),function(re
 	console.log("---------------------------");
 });
 
-app.post("/api/v1/user/register",validate({ body: schema.registerSchema }),function(req, res, next) {
-    let data = req.body;
-    let outputData = {
-        "status": {
-            "code": 1000,
-            "description" :"Successfully Sign Up!",
-        },
-        "data":{
-            "redirectPath" : "/signin.html"
-        }
-    }
-    res.json(outputData);
-    next();
+app.post("/api/v1/user/register",validate({ body: schema.registerSchema }), async function(req, res, next) {
+    let reqData = req.body;
+	
+	// Check email & username
+	let sqlCommand = `SELECT username,email FROM user_info WHERE email = '${reqData.email}' OR username = '${reqData.username}'`
+	console.log(sqlCommand)
+	let reqUrl = "http://localhost:3000/internal/api/v1/table/query"
+	let payload = {"sqlCommand":sqlCommand}
+	let validationCheck = await axios.post(reqUrl,payload)
+	let validateResp = validationCheck.data
+
+	if (validateResp.status.code === 1000 && validateResp.data.userInfo.length == 0){
+		validationFlag = "y"
+	}else{
+		validationFlag = "n"
+	}
+
+	if(validationFlag == "y"){
+		sqlCommand = `INSERT INTO user_info (username,password,email,role) VALUES ('${reqData.username}', '${reqData.password}', '${reqData.email}', 'member')`
+
+		reqUrl = "http://localhost:3000/internal/api/v1/table/insert"
+		payload = {"sqlCommand":sqlCommand}
+		let insertDb = await axios.post(reqUrl,payload)
+		let insertDbStatus = await insertDb.data.status
+		
+		if (insertDbStatus.code === 1000){
+			output = {
+				"status": {
+					"code": 1000,
+					"description" :"Successfully Sign Up!",
+				},
+				"data":{
+					"redirectPath" : "/signin.html"
+				}
+			}
+			res.json(output)
+		}else{
+			output = {
+				"status": {
+					"code": 1899,
+					"description" : "Cannot process at this moment, please try again!",
+				}
+			}
+			res.json(output)
+		}
+	}else{
+		output = {
+			"status": {
+				"code": 1899,
+				"description" : "Username or Email already exists!",
+			}
+		}
+		res.json(output)
+	}
 	// Log Request
 	console.log(`API Method: ${req.method}`);
 	console.log(`API Path: ${req.path}`);
@@ -482,6 +525,141 @@ app.get("/api/v1/stock/total/ema", async (req,res,next) => {
 		next();
 	};
 });
+
+app.post("/internal/api/v1/table/create", async (req,res,next) => {
+	let sqlCommand = req.body.sqlCommand;
+	dbConn.run(sqlCommand,[],(err)=>{
+		if (err) {
+			output = {
+				"status": {
+					"code": 1899,
+					"description" : "Cannot process at this moment, please try again!",
+				}
+			}
+			res.json(output)
+		}else{
+			output = {
+				"status": {
+					"code": 1000,
+					"description" : "Successfully!",
+				}
+			}
+			res.json(output)
+		}
+	});
+	// Log Request
+	console.log(`API Method: ${req.method}`);
+	console.log(`API Path: ${req.path}`);
+	console.log(`Request Host: ${req.hostname}`);
+	console.log(`Request Origin: ${req.ip}`);
+	console.log(`Request Url: ${req.originalUrl}`);
+	console.log(`Request Date: ${new Date().toJSON().slice(0, 10)}`);
+	console.log(`Request Time: ${new Date().toJSON().slice(11, 24)}`);
+	console.log(`Response Status: ${res.statusCode}`);
+	console.log("---------------------------");
+})
+
+app.delete("/internal/api/v1/table/drop", async (req,res,next) => {
+	let sqlCommand = req.body.sqlCommand;
+	dbConn.run(sqlCommand,[],(err)=>{
+		if (err) {
+			output = {
+				"status": {
+					"code": 1899,
+					"description" : "Cannot process at this moment, please try again!",
+				}
+			}
+			res.json(output)
+		}else{
+			output = {
+				"status": {
+					"code": 1000,
+					"description" : "Successfully!",
+				}
+			}
+			res.json(output)
+		}
+	});
+	// Log Request
+	console.log(`API Method: ${req.method}`);
+	console.log(`API Path: ${req.path}`);
+	console.log(`Request Host: ${req.hostname}`);
+	console.log(`Request Origin: ${req.ip}`);
+	console.log(`Request Url: ${req.originalUrl}`);
+	console.log(`Request Date: ${new Date().toJSON().slice(0, 10)}`);
+	console.log(`Request Time: ${new Date().toJSON().slice(11, 24)}`);
+	console.log(`Response Status: ${res.statusCode}`);
+	console.log("---------------------------");
+})
+
+app.post("/internal/api/v1/table/insert", async (req,res,next) => {
+	let sqlCommand = req.body.sqlCommand;
+	dbConn.run(sqlCommand,[],(err) =>{
+		if (err) {
+			output = {
+				"status": {
+					"code": 1899,
+					"description" : "Cannot process at this moment, please try again!",
+				}
+			}
+			res.json(output)
+		}else{
+			output = {
+				"status": {
+					"code": 1000,
+					"description" : "Successfully!",
+				}
+			}
+			res.json(output)
+		}
+	})
+	// Log Request
+	console.log(`API Method: ${req.method}`);
+	console.log(`API Path: ${req.path}`);
+	console.log(`Request Host: ${req.hostname}`);
+	console.log(`Request Origin: ${req.ip}`);
+	console.log(`Request Url: ${req.originalUrl}`);
+	console.log(`Request Date: ${new Date().toJSON().slice(0, 10)}`);
+	console.log(`Request Time: ${new Date().toJSON().slice(11, 24)}`);
+	console.log(`Response Status: ${res.statusCode}`);
+	console.log("---------------------------");
+})
+
+app.post("/internal/api/v1/table/query", async (req,res,next) => {
+	let sqlCommand = req.body.sqlCommand;
+	dbConn.all(sqlCommand,[],(err,rows) =>{
+		if (err) {
+			output = {
+				"status": {
+					"code": 1899,
+					"description" : "Cannot process at this moment, please try again!",
+				}
+			}
+			res.json(output)
+		}else{
+			output = {
+				"status": {
+					"code": 1000,
+					"description" : "Successfully!",
+				},
+				"data":{
+					"userInfo": rows
+				}
+			}
+			res.json(output)
+		}
+	})
+	// Log Request
+	console.log(`API Method: ${req.method}`);
+	console.log(`API Path: ${req.path}`);
+	console.log(`Request Host: ${req.hostname}`);
+	console.log(`Request Origin: ${req.ip}`);
+	console.log(`Request Url: ${req.originalUrl}`);
+	console.log(`Request Date: ${new Date().toJSON().slice(0, 10)}`);
+	console.log(`Request Time: ${new Date().toJSON().slice(11, 24)}`);
+	console.log(`Response Status: ${res.statusCode}`);
+	console.log("---------------------------");
+})
 
 app.listen(port, () => {
 	console.log("Server running on port 3000");
