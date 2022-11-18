@@ -5,7 +5,7 @@ let app = express();
 const port = 3000;
 const db = require('./function/dbConnection');
 let dbConn = db.dbConnection()
-
+const bcrypt = require('bcryptjs');
 // CORS
 
 app.use(cors({
@@ -144,22 +144,40 @@ require('dotenv').config();
 
 
 
-app.post("/api/v1/user/login",validate({ body: schema.loginSchema }),function(req, res, next) {
-    let data = req.body;
-    let token = jwtToken.create(req.body.username)
-    let outputData = {
-        "status": {
-            "code": 1000,
-            "description" :"Successfully Sign In!",
-        },
-        "data": {
-            "token" : token,
-            "username" : req.body.username,
-            "redirectPath" : "/home.html"
-        }
-    }
-    res.json(outputData);
-    next();
+app.post("/api/v1/user/login",validate({ body: schema.loginSchema }), async function(req, res, next) {
+    let reqData = req.body;
+	// Check username & password
+	let sqlCommand = `SELECT password FROM user_info WHERE username = '${reqData.username}'`
+	let reqUrl = "http://localhost:3000/internal/api/v1/table/query"
+	let payload = {"sqlCommand":sqlCommand}
+	let validationCheck = await axios.post(reqUrl,payload)
+	let validateResp = validationCheck.data
+	let validatePassword = await bcrypt.compare(reqData.password, validateResp.data.userInfo[0].password)
+
+	if (validateResp.status.code === 1000 && validateResp.data.userInfo.length == 1 && validatePassword === true){
+		let token = jwtToken.create(req.body.username)
+		let outputData = {
+			"status": {
+				"code": 1000,
+				"description" :"Successfully Sign In!",
+			},
+			"data": {
+				"token" : token,
+				"username" : req.body.username,
+				"redirectPath" : "/home.html"
+			}
+		}
+		res.json(outputData);
+		next();
+	}else{
+		output = {
+			"status": {
+				"code": 1899,
+				"description" : "Invalid Username or Password, please try again!",
+			}
+		}
+		res.json(output)
+	}
 	// Log Request
 	console.log(`API Method: ${req.method}`);
 	console.log(`API Path: ${req.path}`);
@@ -177,7 +195,6 @@ app.post("/api/v1/user/register",validate({ body: schema.registerSchema }), asyn
 	
 	// Check email & username
 	let sqlCommand = `SELECT username,email FROM user_info WHERE email = '${reqData.email}' OR username = '${reqData.username}'`
-	console.log(sqlCommand)
 	let reqUrl = "http://localhost:3000/internal/api/v1/table/query"
 	let payload = {"sqlCommand":sqlCommand}
 	let validationCheck = await axios.post(reqUrl,payload)
@@ -190,7 +207,8 @@ app.post("/api/v1/user/register",validate({ body: schema.registerSchema }), asyn
 	}
 
 	if(validationFlag == "y"){
-		sqlCommand = `INSERT INTO user_info (username,password,email,role) VALUES ('${reqData.username}', '${reqData.password}', '${reqData.email}', 'member')`
+		let encryptedPassword = await bcrypt.hash(reqData.password, 12)
+		sqlCommand = `INSERT INTO user_info (username,password,email,role) VALUES ('${reqData.username}', '${encryptedPassword}', '${reqData.email}', 'member')`
 
 		reqUrl = "http://localhost:3000/internal/api/v1/table/insert"
 		payload = {"sqlCommand":sqlCommand}
