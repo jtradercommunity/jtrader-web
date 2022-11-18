@@ -148,28 +148,47 @@ app.post("/api/v1/user/login",validate({ body: schema.loginSchema }), async func
 	try{
 		let reqData = req.body;
 		// Check username & password
-		let sqlCommand = `SELECT password FROM user_info WHERE username = '${reqData.username}'`
+		let sqlCommand = `SELECT user_id,password FROM user_info WHERE username = '${reqData.username}'`
 		let reqUrl = "http://localhost:3000/internal/api/v1/table/query"
 		let payload = {"sqlCommand":sqlCommand}
 		let validationCheck = await axios.post(reqUrl,payload)
 		let validateResp = validationCheck.data
+		let userId = validationCheck.data.data.userInfo[0].user_id
 
 		if (validateResp.status.code === 1000 && validateResp.data.userInfo.length == 1){
 			let validatePassword = await bcrypt.compare(reqData.password, validateResp.data.userInfo[0].password)
 			if(validatePassword === true){
+				// Generate Token
 				let token = jwtToken.create(req.body.username)
-				let outputData = {
-					"status": {
-						"code": 1000,
-						"description" :"Successfully Sign In!",
-					},
-					"data": {
-						"token" : token,
-						"username" : req.body.username,
-						"redirectPath" : "/home.html"
+				// Insert auth information
+				let loginTime = Date(Date.now());
+				sqlCommand = `INSERT INTO auth_info (user_id,token,login_datetime) VALUES ('${userId}', '${token}', '${loginTime.toString()}')`
+				reqUrl = "http://localhost:3000/internal/api/v1/table/insert"
+				payload = {"sqlCommand":sqlCommand}
+				let insertAuthInfo = await axios.post(reqUrl,payload)
+				let authInfoStatus = await insertAuthInfo.data.status
+				if(authInfoStatus.code === 1000){
+					let outputData = {
+						"status": {
+							"code": 1000,
+							"description" :"Successfully Sign In!",
+						},
+						"data": {
+							"token" : token,
+							"userId" : validateResp.data.userInfo[0].user_id,
+							"redirectPath" : "/home.html"
+						}
 					}
+					res.json(outputData);
+				}else{
+					output = {
+						"status": {
+							"code": 1899,
+							"description" : "Cannot process at this moment, please try again!",
+						}
+					}
+					res.json(output)				
 				}
-				res.json(outputData);
 				next();
 			}else{
 				output = {
@@ -317,6 +336,7 @@ app.post("/api/v1/user/auth", middleware.auth, (req, res) => {
 
 // yahoo finance
 var yahooFinance = require('yahoo-finance');
+const { response, request } = require('express');
 
 
 app.get("/api/v1/stock/price/inquiry", (req,res,next) => {
@@ -462,8 +482,6 @@ app.get("/api/v1/stock/set50/list", async (req,res) => {
 	console.log(`Response Status: ${res.statusCode}`);
 	console.log("---------------------------");
 });
-
-// Test
 
 const EMA = require('technicalindicators').EMA;
 app.get("/internal/api/v1/stock/calculate/ema", async (req,res,next) => {
@@ -682,6 +700,39 @@ app.post("/internal/api/v1/table/insert", async (req,res,next) => {
 	console.log("---------------------------");
 })
 
+app.put("/internal/api/v1/table/update", async (req,res,next) => {
+	let sqlCommand = req.body.sqlCommand;
+	dbConn.run(sqlCommand,[],(err) =>{
+		if (err) {
+			output = {
+				"status": {
+					"code": 1899,
+					"description" : "Cannot process at this moment, please try again!",
+				}
+			}
+			res.json(output)
+		}else{
+			output = {
+				"status": {
+					"code": 1000,
+					"description" : "Successfully!",
+				}
+			}
+			res.json(output)
+		}
+	})
+	// Log Request
+	console.log(`API Method: ${req.method}`);
+	console.log(`API Path: ${req.path}`);
+	console.log(`Request Host: ${req.hostname}`);
+	console.log(`Request Origin: ${req.ip}`);
+	console.log(`Request Url: ${req.originalUrl}`);
+	console.log(`Request Date: ${new Date().toJSON().slice(0, 10)}`);
+	console.log(`Request Time: ${new Date().toJSON().slice(11, 24)}`);
+	console.log(`Response Status: ${res.statusCode}`);
+	console.log("---------------------------");
+})
+
 app.post("/internal/api/v1/table/query", async (req,res,next) => {
 	let sqlCommand = req.body.sqlCommand;
 	dbConn.all(sqlCommand,[],(err,rows) =>{
@@ -706,6 +757,104 @@ app.post("/internal/api/v1/table/query", async (req,res,next) => {
 			res.json(output)
 		}
 	})
+	// Log Request
+	console.log(`API Method: ${req.method}`);
+	console.log(`API Path: ${req.path}`);
+	console.log(`Request Host: ${req.hostname}`);
+	console.log(`Request Origin: ${req.ip}`);
+	console.log(`Request Url: ${req.originalUrl}`);
+	console.log(`Request Date: ${new Date().toJSON().slice(0, 10)}`);
+	console.log(`Request Time: ${new Date().toJSON().slice(11, 24)}`);
+	console.log(`Response Status: ${res.statusCode}`);
+	console.log("---------------------------");
+})
+
+app.get("/internal/api/v1/user/validate/token", async (req, res,next) =>{
+	try{
+		let token = req.get('Authorization');
+		let userId = req.get('userId');
+
+		let validateAuthUrl = "http://localhost:3000/internal/api/v1/table/query";
+		sqlCommand = `SELECT * from auth_info WHERE user_id=${userId} AND token='${token}'`;
+		let getAuthInfo = await axios.post(validateAuthUrl,{"sqlCommand":sqlCommand})
+		let respAuth = await getAuthInfo.data
+		if(respAuth.status.code === 1000 && respAuth.data.userInfo.length === 1){
+			output = {
+				"status": {
+					"code": 1000,
+					"description" : "Successfully!",
+				},
+				"data":{
+					"validationResult": true
+				}
+			} 
+			res.json(output)
+		}else{
+			output = {
+				"status": {
+					"code": 1000,
+					"description" : "Successfully!",
+				},
+				"data":{
+					"validationResult": false
+				}
+			} 
+			res.json(output)
+		}
+	}catch(err){
+		output = {
+			"status": {
+				"code": 1899,
+				"description" : "Cannot process at this moment, please try again!",
+			}
+		}
+		res.json(output)
+	}
+})
+
+app.get("/api/v1/page/home", async (req,res,next) => {
+	try{
+		let token = req.get('Authorization');
+		let userId = req.get('userId');
+		console.log(token)
+		let authUrl = "http://localhost:3000/internal/api/v1/user/validate/token";
+		let auth = await axios.get(authUrl,{headers:{"Authorization":token,"userId":userId}})
+
+		if(auth.data.status.code === 1000 && auth.data.data.validationResult === true) {
+			let getUserInfoUrl = "http://localhost:3000/internal/api/v1/table/query";
+			sqlCommand = `SELECT username,email,role from user_info WHERE user_id=${userId}`
+			let getUserInfo = await axios.post(getUserInfoUrl,{"sqlCommand":sqlCommand})
+			res.json(getUserInfo.data)
+		}else if(auth.data.status.code === 1000 && auth.data.data.validationResult === false){
+			output = {
+				"status": {
+					"code": 3000,
+					"description" : "Invalid Credential!",
+				},
+				"data":{
+					"redirectPath" : "/signout.html"
+				}
+			}
+			res.json(output)
+		}else{
+			output = {
+				"status": {
+					"code": 1899,
+					"description" : "Cannot process at this moment, please try again!",
+				}
+			}
+			res.json(output)			
+		}
+	}catch(err){
+		output = {
+			"status": {
+				"code": 1899,
+				"description" : "Cannot process at this moment, please try again!",
+			}
+		}
+		res.json(output)
+	}
+
 	// Log Request
 	console.log(`API Method: ${req.method}`);
 	console.log(`API Path: ${req.path}`);
