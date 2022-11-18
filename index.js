@@ -145,35 +145,65 @@ require('dotenv').config();
 
 
 app.post("/api/v1/user/login",validate({ body: schema.loginSchema }), async function(req, res, next) {
-    let reqData = req.body;
-	// Check username & password
-	let sqlCommand = `SELECT password FROM user_info WHERE username = '${reqData.username}'`
-	let reqUrl = "http://localhost:3000/internal/api/v1/table/query"
-	let payload = {"sqlCommand":sqlCommand}
-	let validationCheck = await axios.post(reqUrl,payload)
-	let validateResp = validationCheck.data
-	let validatePassword = await bcrypt.compare(reqData.password, validateResp.data.userInfo[0].password)
+	try{
+		let reqData = req.body;
+		// Check username & password
+		let sqlCommand = `SELECT password FROM user_info WHERE username = '${reqData.username}'`
+		let reqUrl = "http://localhost:3000/internal/api/v1/table/query"
+		let payload = {"sqlCommand":sqlCommand}
+		let validationCheck = await axios.post(reqUrl,payload)
+		let validateResp = validationCheck.data
 
-	if (validateResp.status.code === 1000 && validateResp.data.userInfo.length == 1 && validatePassword === true){
-		let token = jwtToken.create(req.body.username)
-		let outputData = {
-			"status": {
-				"code": 1000,
-				"description" :"Successfully Sign In!",
-			},
-			"data": {
-				"token" : token,
-				"username" : req.body.username,
-				"redirectPath" : "/home.html"
+		if (validateResp.status.code === 1000 && validateResp.data.userInfo.length == 1){
+			let validatePassword = await bcrypt.compare(reqData.password, validateResp.data.userInfo[0].password)
+			if(validatePassword === true){
+				let token = jwtToken.create(req.body.username)
+				let outputData = {
+					"status": {
+						"code": 1000,
+						"description" :"Successfully Sign In!",
+					},
+					"data": {
+						"token" : token,
+						"username" : req.body.username,
+						"redirectPath" : "/home.html"
+					}
+				}
+				res.json(outputData);
+				next();
+			}else{
+				output = {
+					"status": {
+						"code": 1899,
+						"description" : "Invalid Password, please try again!",
+					}
+				}
+				res.json(output);
+				next();		
 			}
+		}else if(validateResp.status.code === 1000 && validateResp.data.userInfo.length == 0){
+			output = {
+				"status": {
+					"code": 1899,
+					"description" : "Please register your account!",
+				}
+			}
+			res.json(output)
+		}else{
+			output = {
+				"status": {
+					"code": 1899,
+					"description" : "Invalid Username or Password, please try again!",
+				}
+			}
+			res.json(output)
 		}
-		res.json(outputData);
-		next();
-	}else{
+	}catch(err){
+		console.log(err.message)
 		output = {
 			"status": {
 				"code": 1899,
-				"description" : "Invalid Username or Password, please try again!",
+				"description" : "Cannot process at this moment, please try again!",
 			}
 		}
 		res.json(output)
