@@ -199,7 +199,6 @@ app.post("/api/v1/user/login",validate({ body: schema.loginSchema }), async func
 			res.json(output)
 		}
 	}catch(err){
-		console.log(err.message)
 		output = {
 			"status": {
 				"code": 1899,
@@ -221,55 +220,65 @@ app.post("/api/v1/user/login",validate({ body: schema.loginSchema }), async func
 });
 
 app.post("/api/v1/user/register",validate({ body: schema.registerSchema }), async function(req, res, next) {
-    let reqData = req.body;
-	
-	// Check email & username
-	let sqlCommand = `SELECT username,email FROM user_info WHERE email = '${reqData.email}' OR username = '${reqData.username}'`
-	let reqUrl = "http://localhost:3000/internal/api/v1/table/query"
-	let payload = {"sqlCommand":sqlCommand}
-	let validationCheck = await axios.post(reqUrl,payload)
-	let validateResp = validationCheck.data
-
-	if (validateResp.status.code === 1000 && validateResp.data.userInfo.length == 0){
-		validationFlag = "y"
-	}else{
-		validationFlag = "n"
-	}
-
-	if(validationFlag == "y"){
-		let encryptedPassword = await bcrypt.hash(reqData.password, 12)
-		sqlCommand = `INSERT INTO user_info (username,password,email,role) VALUES ('${reqData.username}', '${encryptedPassword}', '${reqData.email}', 'member')`
-
-		reqUrl = "http://localhost:3000/internal/api/v1/table/insert"
-		payload = {"sqlCommand":sqlCommand}
-		let insertDb = await axios.post(reqUrl,payload)
-		let insertDbStatus = await insertDb.data.status
+	try{
+		let reqData = req.body;
 		
-		if (insertDbStatus.code === 1000){
-			output = {
-				"status": {
-					"code": 1000,
-					"description" :"Successfully Sign Up!",
-				},
-				"data":{
-					"redirectPath" : "/signin.html"
+		// Check email & username
+		let sqlCommand = `SELECT username,email FROM user_info WHERE email = '${reqData.email}' OR username = '${reqData.username}'`
+		let reqUrl = "http://localhost:3000/internal/api/v1/table/query"
+		let payload = {"sqlCommand":sqlCommand}
+		let validationCheck = await axios.post(reqUrl,payload)
+		let validateResp = validationCheck.data
+
+		if (validateResp.status.code === 1000 && validateResp.data.userInfo.length == 0){
+			validationFlag = "y"
+		}else{
+			validationFlag = "n"
+		}
+
+		if(validationFlag == "y"){
+			let encryptedPassword = await bcrypt.hash(reqData.password, 12)
+			sqlCommand = `INSERT INTO user_info (username,password,email,role) VALUES ('${reqData.username}', '${encryptedPassword}', '${reqData.email}', 'member')`
+
+			reqUrl = "http://localhost:3000/internal/api/v1/table/insert"
+			payload = {"sqlCommand":sqlCommand}
+			let insertDb = await axios.post(reqUrl,payload)
+			let insertDbStatus = await insertDb.data.status
+			
+			if (insertDbStatus.code === 1000){
+				output = {
+					"status": {
+						"code": 1000,
+						"description" :"Successfully Sign Up!",
+					},
+					"data":{
+						"redirectPath" : "/signin.html"
+					}
 				}
+				res.json(output)
+			}else{
+				output = {
+					"status": {
+						"code": 1899,
+						"description" : "Cannot process at this moment, please try again!",
+					}
+				}
+				res.json(output)
 			}
-			res.json(output)
 		}else{
 			output = {
 				"status": {
 					"code": 1899,
-					"description" : "Cannot process at this moment, please try again!",
+					"description" : "Username or Email already exists!",
 				}
 			}
 			res.json(output)
 		}
-	}else{
+	}catch(err){
 		output = {
 			"status": {
 				"code": 1899,
-				"description" : "Username or Email already exists!",
+				"description" : "Cannot process at this moment, please try again!",
 			}
 		}
 		res.json(output)
