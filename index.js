@@ -153,8 +153,6 @@ app.post("/api/v1/user/login",validate({ body: schema.loginSchema }), async func
 		let payload = {"sqlCommand":sqlCommand}
 		let validationCheck = await axios.post(reqUrl,payload)
 		let validateResp = validationCheck.data
-		let userId = validationCheck.data.data.userInfo[0].user_id
-
 		if (validateResp.status.code === 1000 && validateResp.data.userInfo.length == 1){
 			let validatePassword = await bcrypt.compare(reqData.password, validateResp.data.userInfo[0].password)
 			if(validatePassword === true){
@@ -162,6 +160,7 @@ app.post("/api/v1/user/login",validate({ body: schema.loginSchema }), async func
 				let token = jwtToken.create(req.body.username)
 				// Insert auth information
 				let loginTime = Date(Date.now());
+				let userId = validationCheck.data.data.userInfo[0].user_id
 				sqlCommand = `INSERT INTO auth_info (user_id,token,login_datetime) VALUES ('${userId}', '${token}', '${loginTime.toString()}')`
 				reqUrl = "http://localhost:3000/internal/api/v1/table/insert"
 				payload = {"sqlCommand":sqlCommand}
