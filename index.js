@@ -256,7 +256,7 @@ app.post("/api/v1/user/register",validate({ body: schema.registerSchema }), asyn
 
 		if(validationFlag == "y"){
 			let encryptedPassword = await bcrypt.hash(reqData.password, 12)
-			sqlCommand = `INSERT INTO user_info (username,password,email,role) VALUES ('${reqData.username}', '${encryptedPassword}', '${reqData.email}', 'member')`
+			sqlCommand = `INSERT INTO user_info (firstname,lastname,username,password,email,role) VALUES ('${reqData.firstname}','${reqData.lastname}','${reqData.username}', '${encryptedPassword}', '${reqData.email}', 'member')`
 
 			reqUrl = "http://localhost:3000/internal/api/v1/table/insert"
 			payload = {"sqlCommand":sqlCommand}
@@ -821,7 +821,7 @@ app.get("/api/v1/page/home", async (req,res,next) => {
 
 		if(auth.data.status.code === 1000 && auth.data.data.validationResult === true) {
 			let getUserInfoUrl = "http://localhost:3000/internal/api/v1/table/query";
-			sqlCommand = `SELECT username,email,role from user_info WHERE user_id=${userId}`
+			sqlCommand = `SELECT firstname,lastname,username,email,role from user_info WHERE user_id=${userId}`
 			let getUserInfo = await axios.post(getUserInfoUrl,{"sqlCommand":sqlCommand})
 			res.json(getUserInfo.data)
 		}else if(auth.data.status.code === 1000 && auth.data.data.validationResult === false){

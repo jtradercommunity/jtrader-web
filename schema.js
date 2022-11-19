@@ -15,8 +15,16 @@ const loginSchema = {
 
 const registerSchema = {
     type: "object",
-    required: ["username","email","password"],
+    required: ["firstname","lastname","username","email","password"],
     properties: {
+        firstname: {
+            type: "string",
+            minLength: 1,
+        },
+        lastname: {
+            type: "string",
+            minLength: 1,
+        },
         username: {
             type: "string",
             minLength: 1,
