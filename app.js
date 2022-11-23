@@ -341,7 +341,8 @@ const { response, request } = require('express');
 app.get("/api/v1/stock/price/inquiry", (req,res,next) => {
 	let symbol = req.query.symbol;
 	let from = req.query.from;
-	let to = req.query.to;
+	let to = new Date(req.query.to);
+	to.setDate(to.getDate()+1)
 	let period = req.query.period;
 	try {
 		yahooFinance.historical({
@@ -540,18 +541,13 @@ app.get("/api/v1/stock/total/ema", async (req,res,next) => {
 	try{
 		let set100 = await axios.get('http://localhost:3000/api/v1/stock/set100/list')
 		let set100List = set100.data.data.set100List
-		//let set100List = [{quote:"KKP"},{quote:"OR"}]
+		// let set100List = [{quote:"KKP"},{quote:"OR"}]
 		let from = req.query.from;
 		let to = req.query.to;
 		let ema = req.query.ema;
 		for(var key in set100List){
 			set100List[key].quote = set100List[key].quote+".BK";
 		};
-
-		let getRealDate = await axios.get(`http://localhost:3000/api/v1/stock/price/inquiry?symbol=^SET.BK&from=${from}&to=${to}&period=d`)
-		let getRealDateResp = await getRealDate.data.data.historyPrice
-		let realStartDate = await getRealDateResp[0].date;
-		let realEndDate = await getRealDateResp[getRealDateResp.length - 1].date;
 
 		let rawData = []
 
@@ -566,27 +562,44 @@ app.get("/api/v1/stock/total/ema", async (req,res,next) => {
 			}
 		}
 
-		let outputData = {};
+		let outputData = [];
 		var dateList = rawData.map( (value) => value.date).filter( (value, index, _arr) => _arr.indexOf(value) == index);
 
 		for (var i = 0, length = dateList.length; i < length; i += 1) {
 			key = dateList[i]
-			outputData[key] = 0;
+			data = {"date":key,"total":0}
+			outputData[i] = data;
 		}
 
 		for (var i = 0, length = rawData.length; i < length; i += 1) {
 			if (rawData[i].isEmaAbove === "Y"){
 				date = rawData[i].date
-				outputData[date] = outputData[date]+1
+				for(var key in outputData){
+					if ((outputData[key].date).match(date)){
+						initial = outputData[key].total
+						outputData[key].total = initial+1;
+					} 
+				}
 			}
 		}
+		
+		outputData.sort((a, b) => {
+			return new Date(a.date) - new Date(b.date);
+		})
 
+		let filteredOutputData = outputData.filter(data => {
+			return (
+			  new Date(data.date).getTime() >= new Date(from).getTime() &&
+			  new Date(data.date).getTime() <= new Date(to).getTime()
+			)
+		})
+		
 		output = {
 			"status": {
 				"code": 1000,
 				"description" :"Successfully Retrieve Above EMA amount!",
 			},
-			"data":outputData
+			"data":filteredOutputData
 		}
 		res.json(output)
 	} catch(error) {
@@ -815,7 +828,6 @@ app.get("/api/v1/page/home", async (req,res,next) => {
 	try{
 		let token = req.get('Authorization');
 		let userId = req.get('userId');
-		console.log(token)
 		let authUrl = "http://localhost:3000/internal/api/v1/user/validate/token";
 		let auth = await axios.get(authUrl,{headers:{"Authorization":token,"userId":userId}})
 
