@@ -884,12 +884,39 @@ const client = require('./connection');
 
 client.connect();
 
-app.get("/test", async (req,res,next) => {
-	client.query(`select * from test;`, (err,result)=>{
+app.post("/test", async (req,res,next) => {
+	let sqlCommand = req.body.sqlCommand;
+	try{
+	client.query(sqlCommand, (err,result)=>{
 		if(!err){
-			res.json(result.rows);
+			data = result.rows;
+			output = {
+				"status": {
+					"code": 1000,
+					"description" : "Successfully!",
+				},
+				"data":data
+			} 
+			res.json(output)
+		}else{
+			output = {
+				"status": {
+					"code": 1899,
+					"description" : "Cannot process at this moment, please try again!",
+				}
+			}
+			res.json(output)			
 		}
 	});
+	}catch(err){
+		output = {
+			"status": {
+				"code": 1899,
+				"description" : "Cannot process at this moment, please try again!",
+			}
+		}
+		res.json(output)
+	}
 	client.end;
 })
 
