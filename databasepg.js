@@ -8,18 +8,12 @@ const client = new Client({
     database: 'jtrader'
 })
 
-function queryDb(sqlCommand){
+async function queryDb(sqlCommand){
     client.connect();
-    client.query(sqlCommand, (err,res) => {
-        if(!err){
-            data = res.rows;
-            console.log(data)
-        } else {
-            data = err.message;
-            console.log(data)
-        }
-        return data;
-    }).then(() => client.end())
+    data = await client.query(sqlCommand);
+    console.log(data);
+    client.end();
+    return data;
 }
 
 module.exports = {queryDb}
