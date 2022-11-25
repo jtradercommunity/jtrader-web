@@ -14,13 +14,12 @@ function queryDb(sqlCommand){
         if(!err){
             data = res.rows;
             console.log(data)
-            return data;
         } else {
-            error = err.message;
+            data = err.message;
             console.log(error)
-            return error;
         }
         client.end();
+        return data;
     })
 }
 
