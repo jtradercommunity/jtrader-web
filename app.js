@@ -881,7 +881,7 @@ app.get("/api/v1/page/home", async (req,res,next) => {
 const pgdb = require('./databasepg');
 
 app.get("/test", async (req,res,next) => {
-	result = pddb.queryDb(`select * from test;`)
+	result = pgdb.queryDb(`select * from test;`)
 	res.json(result);
 })
 
