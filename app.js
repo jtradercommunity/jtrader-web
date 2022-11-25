@@ -884,7 +884,7 @@ const client = require('./connection');
 
 client.connect();
 
-app.post("/test", async (req,res,next) => {
+app.post("/internal/api/v1/database/action", async (req,res,next) => {
 	let sqlCommand = req.body.sqlCommand;
 	try{
 	client.query(sqlCommand, (err,result)=>{
@@ -918,6 +918,16 @@ app.post("/test", async (req,res,next) => {
 		res.json(output)
 	}
 	client.end;
+	// Log Request
+	console.log(`API Method: ${req.method}`);
+	console.log(`API Path: ${req.path}`);
+	console.log(`Request Host: ${req.hostname}`);
+	console.log(`Request Origin: ${req.ip}`);
+	console.log(`Request Url: ${req.originalUrl}`);
+	console.log(`Request Date: ${new Date().toJSON().slice(0, 10)}`);
+	console.log(`Request Time: ${new Date().toJSON().slice(11, 24)}`);
+	console.log(`Response Status: ${res.statusCode}`);
+	console.log("---------------------------");
 })
 
 
