@@ -878,11 +878,19 @@ app.get("/api/v1/page/home", async (req,res,next) => {
 	console.log("---------------------------");
 })
 
-const pgdb = require('./databasepg');
+//postgresql
+
+const client = require('./connection.js');
+
+client.connect();
 
 app.get("/test", async (req,res,next) => {
-	result = pgdb.queryDb(`select * from test;`)
-	res.json(result);
+	client.query(`select * from test;`, (err,result)=>{
+		if(!err){
+			res.json(result.rows);
+		}
+	});
+	client.end;
 })
 
 
