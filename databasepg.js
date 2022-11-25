@@ -11,6 +11,7 @@ const client = new Client({
 async function queryDb(sqlCommand){
     client.connect();
     data = await client.query(sqlCommand);
+    console.log(data);
     client.end();
     return data;
 }
