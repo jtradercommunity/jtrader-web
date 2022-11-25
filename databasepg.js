@@ -10,7 +10,7 @@ const client = new Client({
 
 function queryDb(sqlCommand){
     client.connect();
-    client.query(sqlCommand, (err,res)=>{
+    client.query(sqlCommand, (err,res) => {
         if(!err){
             data = res.rows;
             console.log(data)
@@ -18,9 +18,9 @@ function queryDb(sqlCommand){
             data = err.message;
             console.log(data)
         }
-        client.end;
         return data;
     })
+    client.end();
 }
 
 module.exports = {queryDb}
