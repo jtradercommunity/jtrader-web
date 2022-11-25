@@ -878,8 +878,16 @@ app.get("/api/v1/page/home", async (req,res,next) => {
 	console.log("---------------------------");
 })
 
+const pgdb = require('./databasepg');
+
+app.get("/test", async (req,res,next) => {
+	result = pddb.queryDb(`select * from test;`)
+	res.json(result);
+})
+
+
 app.listen(port, () => {
-	console.log("Server running on port 3000");
+	console.log(`Server running on port ${port}`);
 	console.log("---------------------------");
 })
 

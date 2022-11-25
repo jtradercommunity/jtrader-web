@@ -54,6 +54,12 @@ server {
 #6
 sudo ln -s /etc/nginx/sites-available/api.jtrader-community.com
 
+** do the same with /etc/nginx/sites-enabled/api.jtrader-community.com **
+** Add port 443: sudo ufw allow https **
+** Add port 80: sudo ufw allow http **
+** Add nginx full: sudo ufw allow 'Nginx Full' **
+** Add crontab to renew ssl every week**
+
 #7
 sudo service nginx restart
 
