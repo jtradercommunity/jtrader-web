@@ -19,8 +19,7 @@ function queryDb(sqlCommand){
             console.log(data)
         }
         return data;
-    })
-    client.end();
+    }).then(() => client.end())
 }
 
 module.exports = {queryDb}
