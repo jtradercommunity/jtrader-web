@@ -16,7 +16,7 @@ function queryDb(sqlCommand){
             console.log(data)
         } else {
             data = err.message;
-            console.log(error)
+            console.log(data)
         }
         client.end();
         return data;
