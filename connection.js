@@ -8,4 +8,4 @@ const client = new Client({
     database: 'jtrader'
 })
 
-module.exports = {client}
+module.exports = client

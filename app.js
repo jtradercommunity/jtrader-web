@@ -880,7 +880,7 @@ app.get("/api/v1/page/home", async (req,res,next) => {
 
 //postgresql
 
-const client = require('./connection.js');
+const client = require('./connection');
 
 client.connect();
 
