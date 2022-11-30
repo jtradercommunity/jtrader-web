@@ -1,7 +1,7 @@
 const {Client} = require('pg')
 
 const client = new Client({
-    host: 'localhost',
+    host: '185.78.166.68',
     user: 'admin',
     port: 5432,
     password: 'JTrader2021',

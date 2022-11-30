@@ -1,2 +1,7 @@
+#sqlite
 CREATE TABLE user_info (user_id INTEGER PRIMARY KEY AUTOINCREMENT,firstname TEXT NOT NULL,lastname TEXT NOT NULL,username TEXT NOT NULL UNIQUE,password TEXT NOT NULL,email TEXT NOT NULL UNIQUE,role TEXT NOT NULL)
 CREATE TABLE auth_info (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL,token TEXT NOT NULL,login_datetime TEXT NOT NULL)
+
+#postgresql
+CREATE TABLE user_info (user_id serial PRIMARY KEY,firstname TEXT NOT NULL,lastname TEXT NOT NULL,username TEXT NOT NULL UNIQUE,password TEXT NOT NULL,email TEXT NOT NULL UNIQUE,role TEXT NOT NULL)
+CREATE TABLE auth_info (id serial PRIMARY KEY,user_id INTEGER NOT NULL,token TEXT NOT NULL,login_datetime TEXT NOT NULL)

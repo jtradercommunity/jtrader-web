@@ -6,6 +6,8 @@ const port = 3000;
 const db = require('./function/dbConnection');
 let dbConn = db.dbConnection()
 const bcrypt = require('bcryptjs');
+const client = require('./connection');
+client.connect();
 // CORS
 
 app.use(cors({
@@ -153,14 +155,14 @@ app.post("/api/v1/user/login",validate({ body: schema.loginSchema }), async func
 		let payload = {"sqlCommand":sqlCommand}
 		let validationCheck = await axios.post(reqUrl,payload)
 		let validateResp = validationCheck.data
-		if (validateResp.status.code === 1000 && validateResp.data.userInfo.length == 1){
-			let validatePassword = await bcrypt.compare(reqData.password, validateResp.data.userInfo[0].password)
+		if (validateResp.status.code === 1000 && validateResp.data.length == 1){
+			let validatePassword = await bcrypt.compare(reqData.password, validateResp.data[0].password)
 			if(validatePassword === true){
 				// Generate Token
 				let token = jwtToken.create(req.body.username)
 				// Insert auth information
 				let loginTime = Date(Date.now());
-				let userId = validationCheck.data.data.userInfo[0].user_id
+				let userId = validationCheck.data.data[0].user_id
 				sqlCommand = `INSERT INTO auth_info (user_id,token,login_datetime) VALUES ('${userId}', '${token}', '${loginTime.toString()}')`
 				reqUrl = "http://localhost:3000/internal/api/v1/table/insert"
 				payload = {"sqlCommand":sqlCommand}
@@ -174,7 +176,7 @@ app.post("/api/v1/user/login",validate({ body: schema.loginSchema }), async func
 						},
 						"data": {
 							"token" : token,
-							"userId" : validateResp.data.userInfo[0].user_id,
+							"userId" : validateResp.data[0].user_id,
 							"redirectPath" : "/home.html"
 						}
 					}
@@ -199,7 +201,7 @@ app.post("/api/v1/user/login",validate({ body: schema.loginSchema }), async func
 				res.json(output);
 				next();		
 			}
-		}else if(validateResp.status.code === 1000 && validateResp.data.userInfo.length == 0){
+		}else if(validateResp.status.code === 1000 && validateResp.data.length == 0){
 			output = {
 				"status": {
 					"code": 1899,
@@ -248,7 +250,7 @@ app.post("/api/v1/user/register",validate({ body: schema.registerSchema }), asyn
 		let validationCheck = await axios.post(reqUrl,payload)
 		let validateResp = validationCheck.data
 
-		if (validateResp.status.code === 1000 && validateResp.data.userInfo.length == 0){
+		if (validateResp.status.code === 1000 && validateResp.data.length == 0){
 			validationFlag = "y"
 		}else{
 			validationFlag = "n"
@@ -257,7 +259,6 @@ app.post("/api/v1/user/register",validate({ body: schema.registerSchema }), asyn
 		if(validationFlag == "y"){
 			let encryptedPassword = await bcrypt.hash(reqData.password, 12)
 			sqlCommand = `INSERT INTO user_info (firstname,lastname,username,password,email,role) VALUES ('${reqData.firstname}','${reqData.lastname}','${reqData.username}', '${encryptedPassword}', '${reqData.email}', 'member')`
-
 			reqUrl = "http://localhost:3000/internal/api/v1/table/insert"
 			payload = {"sqlCommand":sqlCommand}
 			let insertDb = await axios.post(reqUrl,payload)
@@ -613,278 +614,9 @@ app.get("/api/v1/stock/total/ema", async (req,res,next) => {
 	};
 });
 
+// Database
+
 app.post("/internal/api/v1/table/create", async (req,res,next) => {
-	let sqlCommand = req.body.sqlCommand;
-	dbConn.run(sqlCommand,[],(err)=>{
-		if (err) {
-			output = {
-				"status": {
-					"code": 1899,
-					"description" : "Cannot process at this moment, please try again!",
-				}
-			}
-			res.json(output)
-		}else{
-			output = {
-				"status": {
-					"code": 1000,
-					"description" : "Successfully!",
-				}
-			}
-			res.json(output)
-		}
-	});
-	// Log Request
-	console.log(`API Method: ${req.method}`);
-	console.log(`API Path: ${req.path}`);
-	console.log(`Request Host: ${req.hostname}`);
-	console.log(`Request Origin: ${req.ip}`);
-	console.log(`Request Url: ${req.originalUrl}`);
-	console.log(`Request Date: ${new Date().toJSON().slice(0, 10)}`);
-	console.log(`Request Time: ${new Date().toJSON().slice(11, 24)}`);
-	console.log(`Response Status: ${res.statusCode}`);
-	console.log("---------------------------");
-})
-
-app.delete("/internal/api/v1/table/drop", async (req,res,next) => {
-	let sqlCommand = req.body.sqlCommand;
-	dbConn.run(sqlCommand,[],(err)=>{
-		if (err) {
-			output = {
-				"status": {
-					"code": 1899,
-					"description" : "Cannot process at this moment, please try again!",
-				}
-			}
-			res.json(output)
-		}else{
-			output = {
-				"status": {
-					"code": 1000,
-					"description" : "Successfully!",
-				}
-			}
-			res.json(output)
-		}
-	});
-	// Log Request
-	console.log(`API Method: ${req.method}`);
-	console.log(`API Path: ${req.path}`);
-	console.log(`Request Host: ${req.hostname}`);
-	console.log(`Request Origin: ${req.ip}`);
-	console.log(`Request Url: ${req.originalUrl}`);
-	console.log(`Request Date: ${new Date().toJSON().slice(0, 10)}`);
-	console.log(`Request Time: ${new Date().toJSON().slice(11, 24)}`);
-	console.log(`Response Status: ${res.statusCode}`);
-	console.log("---------------------------");
-})
-
-app.post("/internal/api/v1/table/insert", async (req,res,next) => {
-	let sqlCommand = req.body.sqlCommand;
-	dbConn.run(sqlCommand,[],(err) =>{
-		if (err) {
-			output = {
-				"status": {
-					"code": 1899,
-					"description" : "Cannot process at this moment, please try again!",
-				}
-			}
-			res.json(output)
-		}else{
-			output = {
-				"status": {
-					"code": 1000,
-					"description" : "Successfully!",
-				}
-			}
-			res.json(output)
-		}
-	})
-	// Log Request
-	console.log(`API Method: ${req.method}`);
-	console.log(`API Path: ${req.path}`);
-	console.log(`Request Host: ${req.hostname}`);
-	console.log(`Request Origin: ${req.ip}`);
-	console.log(`Request Url: ${req.originalUrl}`);
-	console.log(`Request Date: ${new Date().toJSON().slice(0, 10)}`);
-	console.log(`Request Time: ${new Date().toJSON().slice(11, 24)}`);
-	console.log(`Response Status: ${res.statusCode}`);
-	console.log("---------------------------");
-})
-
-app.put("/internal/api/v1/table/update", async (req,res,next) => {
-	let sqlCommand = req.body.sqlCommand;
-	dbConn.run(sqlCommand,[],(err) =>{
-		if (err) {
-			output = {
-				"status": {
-					"code": 1899,
-					"description" : "Cannot process at this moment, please try again!",
-				}
-			}
-			res.json(output)
-		}else{
-			output = {
-				"status": {
-					"code": 1000,
-					"description" : "Successfully!",
-				}
-			}
-			res.json(output)
-		}
-	})
-	// Log Request
-	console.log(`API Method: ${req.method}`);
-	console.log(`API Path: ${req.path}`);
-	console.log(`Request Host: ${req.hostname}`);
-	console.log(`Request Origin: ${req.ip}`);
-	console.log(`Request Url: ${req.originalUrl}`);
-	console.log(`Request Date: ${new Date().toJSON().slice(0, 10)}`);
-	console.log(`Request Time: ${new Date().toJSON().slice(11, 24)}`);
-	console.log(`Response Status: ${res.statusCode}`);
-	console.log("---------------------------");
-})
-
-app.post("/internal/api/v1/table/query", async (req,res,next) => {
-	let sqlCommand = req.body.sqlCommand;
-	dbConn.all(sqlCommand,[],(err,rows) =>{
-		if (err) {
-			output = {
-				"status": {
-					"code": 1899,
-					"description" : "Cannot process at this moment, please try again!",
-				}
-			}
-			res.json(output)
-		}else{
-			output = {
-				"status": {
-					"code": 1000,
-					"description" : "Successfully!",
-				},
-				"data":{
-					"userInfo": rows
-				}
-			}
-			res.json(output)
-		}
-	})
-	// Log Request
-	console.log(`API Method: ${req.method}`);
-	console.log(`API Path: ${req.path}`);
-	console.log(`Request Host: ${req.hostname}`);
-	console.log(`Request Origin: ${req.ip}`);
-	console.log(`Request Url: ${req.originalUrl}`);
-	console.log(`Request Date: ${new Date().toJSON().slice(0, 10)}`);
-	console.log(`Request Time: ${new Date().toJSON().slice(11, 24)}`);
-	console.log(`Response Status: ${res.statusCode}`);
-	console.log("---------------------------");
-})
-
-app.get("/internal/api/v1/user/validate/token", async (req, res,next) =>{
-	try{
-		let token = req.get('Authorization');
-		let userId = req.get('userId');
-
-		let validateAuthUrl = "http://localhost:3000/internal/api/v1/table/query";
-		sqlCommand = `SELECT * from auth_info WHERE user_id=${userId} AND token='${token}'`;
-		let getAuthInfo = await axios.post(validateAuthUrl,{"sqlCommand":sqlCommand})
-		let respAuth = await getAuthInfo.data
-		if(respAuth.status.code === 1000 && respAuth.data.userInfo.length === 1){
-			output = {
-				"status": {
-					"code": 1000,
-					"description" : "Successfully!",
-				},
-				"data":{
-					"validationResult": true
-				}
-			} 
-			res.json(output)
-		}else{
-			output = {
-				"status": {
-					"code": 1000,
-					"description" : "Successfully!",
-				},
-				"data":{
-					"validationResult": false
-				}
-			} 
-			res.json(output)
-		}
-	}catch(err){
-		output = {
-			"status": {
-				"code": 1899,
-				"description" : "Cannot process at this moment, please try again!",
-			}
-		}
-		res.json(output)
-	}
-})
-
-app.get("/api/v1/page/home", async (req,res,next) => {
-	try{
-		let token = req.get('Authorization');
-		let userId = req.get('userId');
-		let authUrl = "http://localhost:3000/internal/api/v1/user/validate/token";
-		let auth = await axios.get(authUrl,{headers:{"Authorization":token,"userId":userId}})
-
-		if(auth.data.status.code === 1000 && auth.data.data.validationResult === true) {
-			let getUserInfoUrl = "http://localhost:3000/internal/api/v1/table/query";
-			sqlCommand = `SELECT firstname,lastname,username,email,role from user_info WHERE user_id=${userId}`
-			let getUserInfo = await axios.post(getUserInfoUrl,{"sqlCommand":sqlCommand})
-			res.json(getUserInfo.data)
-		}else if(auth.data.status.code === 1000 && auth.data.data.validationResult === false){
-			output = {
-				"status": {
-					"code": 3000,
-					"description" : "Invalid Credential!",
-				},
-				"data":{
-					"redirectPath" : "/signout.html"
-				}
-			}
-			res.json(output)
-		}else{
-			output = {
-				"status": {
-					"code": 1899,
-					"description" : "Cannot process at this moment, please try again!",
-				}
-			}
-			res.json(output)			
-		}
-	}catch(err){
-		output = {
-			"status": {
-				"code": 1899,
-				"description" : "Cannot process at this moment, please try again!",
-			}
-		}
-		res.json(output)
-	}
-
-	// Log Request
-	console.log(`API Method: ${req.method}`);
-	console.log(`API Path: ${req.path}`);
-	console.log(`Request Host: ${req.hostname}`);
-	console.log(`Request Origin: ${req.ip}`);
-	console.log(`Request Url: ${req.originalUrl}`);
-	console.log(`Request Date: ${new Date().toJSON().slice(0, 10)}`);
-	console.log(`Request Time: ${new Date().toJSON().slice(11, 24)}`);
-	console.log(`Response Status: ${res.statusCode}`);
-	console.log("---------------------------");
-})
-
-//postgresql
-
-const client = require('./connection');
-
-client.connect();
-
-app.post("/internal/api/v1/database/action", async (req,res,next) => {
 	let sqlCommand = req.body.sqlCommand;
 	try{
 	client.query(sqlCommand, (err,result)=>{
@@ -930,6 +662,295 @@ app.post("/internal/api/v1/database/action", async (req,res,next) => {
 	console.log("---------------------------");
 })
 
+app.delete("/internal/api/v1/table/drop", async (req,res,next) => {
+	let sqlCommand = req.body.sqlCommand;
+	try{
+	client.query(sqlCommand, (err,result)=>{
+		if(!err){
+			data = result.rows;
+			output = {
+				"status": {
+					"code": 1000,
+					"description" : "Successfully!",
+				},
+				"data":data
+			} 
+			res.json(output)
+		}else{
+			output = {
+				"status": {
+					"code": 1899,
+					"description" : "Cannot process at this moment, please try again!",
+				}
+			}
+			res.json(output)			
+		}
+	});
+	}catch(err){
+		output = {
+			"status": {
+				"code": 1899,
+				"description" : "Cannot process at this moment, please try again!",
+			}
+		}
+		res.json(output)
+	}
+	client.end;
+	// Log Request
+	console.log(`API Method: ${req.method}`);
+	console.log(`API Path: ${req.path}`);
+	console.log(`Request Host: ${req.hostname}`);
+	console.log(`Request Origin: ${req.ip}`);
+	console.log(`Request Url: ${req.originalUrl}`);
+	console.log(`Request Date: ${new Date().toJSON().slice(0, 10)}`);
+	console.log(`Request Time: ${new Date().toJSON().slice(11, 24)}`);
+	console.log(`Response Status: ${res.statusCode}`);
+	console.log("---------------------------");
+})
+
+app.post("/internal/api/v1/table/insert", async (req,res,next) => {
+	let sqlCommand = req.body.sqlCommand;
+	try{
+	client.query(sqlCommand, (err,result)=>{
+		if(!err){
+			data = result.rows;
+			output = {
+				"status": {
+					"code": 1000,
+					"description" : "Successfully!",
+				},
+				"data":data
+			} 
+			res.json(output)
+		}else{
+			output = {
+				"status": {
+					"code": 1899,
+					"description" : "Cannot process at this moment, please try again!",
+				}
+			}
+			res.json(output)			
+		}
+	});
+	}catch(err){
+		output = {
+			"status": {
+				"code": 1899,
+				"description" : "Cannot process at this moment, please try again!",
+			}
+		}
+		res.json(output)
+	}
+	client.end;
+	// Log Request
+	console.log(`API Method: ${req.method}`);
+	console.log(`API Path: ${req.path}`);
+	console.log(`Request Host: ${req.hostname}`);
+	console.log(`Request Origin: ${req.ip}`);
+	console.log(`Request Url: ${req.originalUrl}`);
+	console.log(`Request Date: ${new Date().toJSON().slice(0, 10)}`);
+	console.log(`Request Time: ${new Date().toJSON().slice(11, 24)}`);
+	console.log(`Response Status: ${res.statusCode}`);
+	console.log("---------------------------");
+})
+
+app.put("/internal/api/v1/table/update", async (req,res,next) => {
+	let sqlCommand = req.body.sqlCommand;
+	try{
+	client.query(sqlCommand, (err,result)=>{
+		if(!err){
+			data = result.rows;
+			output = {
+				"status": {
+					"code": 1000,
+					"description" : "Successfully!",
+				},
+				"data":data
+			} 
+			res.json(output)
+		}else{
+			output = {
+				"status": {
+					"code": 1899,
+					"description" : "Cannot process at this moment, please try again!",
+				}
+			}
+			res.json(output)			
+		}
+	});
+	}catch(err){
+		output = {
+			"status": {
+				"code": 1899,
+				"description" : "Cannot process at this moment, please try again!",
+			}
+		}
+		res.json(output)
+	}
+	client.end;
+	// Log Request
+	console.log(`API Method: ${req.method}`);
+	console.log(`API Path: ${req.path}`);
+	console.log(`Request Host: ${req.hostname}`);
+	console.log(`Request Origin: ${req.ip}`);
+	console.log(`Request Url: ${req.originalUrl}`);
+	console.log(`Request Date: ${new Date().toJSON().slice(0, 10)}`);
+	console.log(`Request Time: ${new Date().toJSON().slice(11, 24)}`);
+	console.log(`Response Status: ${res.statusCode}`);
+	console.log("---------------------------");
+})
+
+app.post("/internal/api/v1/table/query", async (req,res,next) => {
+	let sqlCommand = req.body.sqlCommand;
+	try{
+	client.query(sqlCommand, (err,result)=>{
+		if(!err){
+			data = result.rows;
+			output = {
+				"status": {
+					"code": 1000,
+					"description" : "Successfully!",
+				},
+				"data":data
+			} 
+			res.json(output)
+		}else{
+			output = {
+				"status": {
+					"code": 1899,
+					"description" : "Cannot process at this moment, please try again!",
+				}
+			}
+			res.json(output)			
+		}
+	});
+	}catch(err){
+		output = {
+			"status": {
+				"code": 1899,
+				"description" : "Cannot process at this moment, please try again!",
+			}
+		}
+		res.json(output)
+	}
+	client.end;
+	// Log Request
+	console.log(`API Method: ${req.method}`);
+	console.log(`API Path: ${req.path}`);
+	console.log(`Request Host: ${req.hostname}`);
+	console.log(`Request Origin: ${req.ip}`);
+	console.log(`Request Url: ${req.originalUrl}`);
+	console.log(`Request Date: ${new Date().toJSON().slice(0, 10)}`);
+	console.log(`Request Time: ${new Date().toJSON().slice(11, 24)}`);
+	console.log(`Response Status: ${res.statusCode}`);
+	console.log("---------------------------");
+})
+
+app.get("/internal/api/v1/user/validate/token", async (req, res,next) =>{
+	try{
+		let token = req.get('Authorization');
+		let userId = req.get('userId');
+
+		let validateAuthUrl = "http://localhost:3000/internal/api/v1/table/query";
+		sqlCommand = `SELECT * from auth_info WHERE user_id=${userId} AND token='${token}'`;
+		let getAuthInfo = await axios.post(validateAuthUrl,{"sqlCommand":sqlCommand})
+		let respAuth = await getAuthInfo.data
+		if(respAuth.status.code === 1000 && respAuth.data.length === 1){
+			output = {
+				"status": {
+					"code": 1000,
+					"description" : "Successfully!",
+				},
+				"data":{
+					"validationResult": true
+				}
+			} 
+			res.json(output)
+		}else{
+			output = {
+				"status": {
+					"code": 1000,
+					"description" : "Successfully!",
+				},
+				"data":{
+					"validationResult": false
+				}
+			} 
+			res.json(output)
+		}
+	}catch(err){
+		output = {
+			"status": {
+				"code": 1899,
+				"description" : "Cannot process at this moment, please try again!",
+			}
+		}
+		res.json(output)
+	}
+})
+
+app.get("/api/v1/page/home", async (req,res,next) => {
+	try{
+		let token = req.get('Authorization');
+		let userId = req.get('userId');
+		let authUrl = "http://localhost:3000/internal/api/v1/user/validate/token";
+		let auth = await axios.get(authUrl,{headers:{"Authorization":token,"userId":userId}})
+
+		if(auth.data.status.code === 1000 && auth.data.data.validationResult === true) {
+			let getUserInfoUrl = "http://localhost:3000/internal/api/v1/table/query";
+			sqlCommand = `SELECT firstname,lastname,username,email,role from user_info WHERE user_id=${userId}`
+			let getUserInfo = await axios.post(getUserInfoUrl,{"sqlCommand":sqlCommand})
+			output = {
+				"status": {
+					"code": 1000,
+					"description" : "Successfully!",
+				},
+				"data":{
+					"userInfo": getUserInfo.data.data
+				}
+			}
+			res.json(output)
+		}else if(auth.data.status.code === 1000 && auth.data.data.validationResult === false){
+			output = {
+				"status": {
+					"code": 3000,
+					"description" : "Invalid Credential!",
+				},
+				"data":{
+					"redirectPath" : "/signout.html"
+				}
+			}
+			res.json(output)
+		}else{
+			output = {
+				"status": {
+					"code": 1899,
+					"description" : "Cannot process at this moment, please try again!",
+				}
+			}
+			res.json(output)			
+		}
+	}catch(err){
+		output = {
+			"status": {
+				"code": 1899,
+				"description" : "Cannot process at this moment, please try again!",
+			}
+		}
+		res.json(output)
+	}
+
+	// Log Request
+	console.log(`API Method: ${req.method}`);
+	console.log(`API Path: ${req.path}`);
+	console.log(`Request Host: ${req.hostname}`);
+	console.log(`Request Origin: ${req.ip}`);
+	console.log(`Request Url: ${req.originalUrl}`);
+	console.log(`Request Date: ${new Date().toJSON().slice(0, 10)}`);
+	console.log(`Request Time: ${new Date().toJSON().slice(11, 24)}`);
+	console.log(`Response Status: ${res.statusCode}`);
+	console.log("---------------------------");
+})
 
 app.listen(port, () => {
 	console.log(`Server running on port ${port}`);
