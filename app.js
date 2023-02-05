@@ -40,15 +40,14 @@ app.get("/internal/api/v1/stock/list", (req,res) => {
 });
 
 
-app.get("/internal/api/v1/stock/financial", (req,res) => {
+app.get("/internal/api/v1/stock/financial", async (req,res) => {
 	// Function
 	try{
 		let securityID = req.query.securityID;
 		let fiscal = req.query.fiscal;
-		let reqUrl = `https://finnomena.com/fn3/api/stock/financial?securityID=${securityID}&fiscal=${fiscal}`	
-		axios.get(reqUrl).then(response => {
+		let reqUrl = `https://finnomena.com/fn3/api/stock/financial?securityID=${securityID}&fiscal=${fiscal}`
+		let response = await axios.get(reqUrl);
 		res.json(response.data.data);
-		});
 	} catch(error) {
 		res.status(500).json({ message: "Cannot Get Data at this time"});	
 	};
@@ -72,16 +71,16 @@ app.get("/api/v1/stock/inquiry", async (req,res) => {
 	try{
 		let quote = req.query.quote;
 		let fiscal = req.query.fiscal;
-		let reqUrl1 = 'http://localhost:3000/internal/api/v1/stock/list';
+		let reqUrl1 = `https://www.finnomena.com/fn3/api/stock/quote?name=${quote.toUpperCase()}`;
 		
 		const stockList = await axios.get(reqUrl1);
-		const filterStockList = stockList.data.filter(({name}) => name === quote.toUpperCase());
+		const filterStockList = stockList.data.data;
 		
-		if (filterStockList.length != 1){
+		if (filterStockList.ID === ""){
 			res.status(400)
 			res.json({ message: `Cannot get data for this quote(${quote})!`});
 		}else{
-			let securityID = filterStockList[0].security_id;
+			let securityID = filterStockList.ID;
 			let reqUrl2 = `http://localhost:3000/internal/api/v1/stock/financial?securityID=${securityID}&fiscal=${fiscal}`
 			let financialInfo = await axios.get(reqUrl2);
 			for(var key in financialInfo.data){
@@ -956,5 +955,3 @@ app.listen(port, () => {
 	console.log(`Server running on port ${port}`);
 	console.log("---------------------------");
 })
-
-
